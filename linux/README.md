@@ -13,7 +13,7 @@ supported.
 ## Install the package (Ubuntu 24.04 or newer)
 
 ```sh
-sudo apt install ./fxsound_1.2.14_amd64.deb
+sudo apt install ./fxsound_1.2.14-2_amd64.deb
 ```
 
 Then start **FxSound** from the app menu, or run `fxsound`.
@@ -61,9 +61,17 @@ on makes FxSound play through that output, as on Windows.
   API (Wayland does not allow global key grabs), so the hotkey settings are
   hidden. You can bind desktop shortcuts to command-line options instead, e.g.
   `fxsound --power=0` / `fxsound --power=1`.
-- **System tray:** uses the XEmbed tray supported by KDE, XFCE, Cinnamon and
-  MATE. Stock GNOME needs the *AppIndicator and KStatusNotifierItem Support*
-  extension. Without a tray, run `fxsound` again to bring the window back.
+- **System tray:** the icon is a StatusNotifierItem (the D-Bus tray protocol
+  used by Ubuntu's AppIndicator extension, KDE Plasma, Cinnamon, waybar, and
+  XFCE/MATE with their status-notifier plugins). Ubuntu shows it out of the
+  box; other GNOME installs need the *AppIndicator and KStatusNotifierItem
+  Support* extension, and the icon appears as soon as it is enabled. Left
+  click shows/hides the window; the menu is the same as on Windows. On
+  desktops with no StatusNotifierItem host, FxSound falls back to an XEmbed
+  icon, but never on GNOME: GNOME Shell treats any X error while embedding a
+  tray window as fatal and ends the session (this happened with 1.2.14-1).
+  `FXSOUND_TRAY=sni|xembed|none` overrides the choice. Without a tray, run
+  `fxsound` again to bring the window back.
 - **Launch at startup** creates `~/.config/autostart/fxsound.desktop`.
 - **Settings, presets and logs** live in `~/.config/FxSound/`.
 - **Command-line options** (`docs/COMMAND_LINE_OPTIONS.md`) work and are
@@ -78,7 +86,7 @@ on makes FxSound play through that output, as on Windows.
 | `audiopassthru/` | PipeWire implementation of `AudioPassthru` (same API as Windows) |
 | `compat/` | Win32 compatibility headers for the DSP engine; `dsp_prelude.h` gives the DSP Windows' 32-bit `long` |
 | `dsp_support/` | Linux versions of the file/string/registry helpers the DSP uses |
-| `gui/` | Linux `SysInfo`, and single-instance command forwarding |
+| `gui/` | Linux `SysInfo`, single-instance command forwarding, and the StatusNotifierItem tray icon |
 | `packaging/` | Desktop entry and icon |
 | `tests/` | DSP and end-to-end audio tests (see below) |
 | `check_dsp_prelude.py` | Verifies no system header is affected by the `long` remap |
@@ -113,6 +121,19 @@ python3 linux/check_dsp_prelude.py               # long-remap invariant
 `tests/run_e2e.sh` plus `tests/compare_capture.py` play a tone through a live
 PipeWire session (FxSound sink → DSP → output), record the output, and compare
 it with the offline DSP result.
+
+Tray icon tests (need `python3-gi`; the second also `pipewire`, `wireplumber`,
+`xvfb`, `xdotool` and `pip install python-xlib`):
+
+```sh
+cmake --build build --target sni_test
+dbus-run-session -- python3 linux/tests/sni_test.py build/sni_test        # D-Bus protocol, fake tray host
+dbus-run-session -- python3 linux/tests/tray_app_test.py build/FxSound_artefacts/Release/FxSound
+```
+
+`tray_app_test.py` runs the real app with fake GNOME/KDE/XFCE tray hosts and
+checks the menu actions, and that the app never asks GNOME to embed an X11
+tray window (and docks the XEmbed fallback only once elsewhere).
 
 ## Known limitations
 

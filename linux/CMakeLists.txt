@@ -64,6 +64,13 @@ if(FX_BUILD_TESTS)
   add_executable(passthru_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/passthru_test.cpp)
   target_link_libraries(passthru_test fxaudiopassthru dfxdsp)
 endif()
+# GIO (GDBus) for the StatusNotifierItem tray icon.
+pkg_check_modules(GIO REQUIRED IMPORTED_TARGET gio-2.0)
+if(FX_BUILD_TESTS)
+  add_executable(sni_test ${CMAKE_CURRENT_SOURCE_DIR}/tests/sni_test.cpp ${CMAKE_CURRENT_SOURCE_DIR}/gui/FxStatusNotifierItem.cpp)
+  target_include_directories(sni_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gui)
+  target_link_libraries(sni_test PkgConfig::GIO pthread)
+endif()
 if(FX_BUILD_TESTS)
   add_executable(dsp_process_raw ${CMAKE_CURRENT_SOURCE_DIR}/tests/dsp_process_raw.cpp)
   target_link_libraries(dsp_process_raw dfxdsp)
@@ -103,7 +110,8 @@ if(FX_BUILD_GUI)
   # Windows-only implementations replaced by Linux versions in linux/gui/.
   list(REMOVE_ITEM FXSOUND_GUI_SOURCES ${FX_ROOT}/fxsound/Source/Utils/SysInfo/SysInfo.cpp)
   target_sources(FxSound PRIVATE ${FXSOUND_GUI_SOURCES} ${FX_ROOT}/fxsound/JuceLibraryCode/BinaryData.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/gui/SysInfoLinux.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/gui/SysInfoLinux.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/gui/FxStatusNotifierItem.cpp)
 
   # Use the Projucer-generated JuceHeader.h/AppConfig.h/BinaryData.h that the
   # Windows build uses, so both platforms get the same JUCE configuration.
@@ -124,7 +132,7 @@ if(FX_BUILD_GUI)
     JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
   target_compile_options(FxSound PRIVATE ${FX_JUCE_COMPAT_FLAGS})
   target_link_libraries(FxSound PRIVATE
-    fxaudiopassthru dfxdsp
+    fxaudiopassthru dfxdsp PkgConfig::GIO
     juce::juce_core juce::juce_cryptography juce::juce_data_structures juce::juce_events
     juce::juce_graphics juce::juce_gui_basics juce::juce_gui_extra juce::juce_opengl
     juce::juce_recommended_config_flags)   # JUCE's extra warning flags only add noise on upstream code
@@ -160,10 +168,13 @@ if(FX_BUILD_GUI)
   set(CPACK_PACKAGE_VENDOR "FxSound LLC")
   set(CPACK_PACKAGE_CONTACT "FxSound <support@fxsound.com>")
   set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Audio enhancer: equalizer and effects for all system audio")
-  set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "FxSound processes everything your computer plays.\n It adds an \"FxSound Audio Enhancer\" output device to PipeWire, applies\n the FxSound DSP (equalizer, clarity, ambience, surround, dynamic boost,\n bass boost) and plays the result on your speakers or headphones.")
+  # No double quotes in here: CPack turns them into ';' list separators.
+  set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "FxSound processes everything your computer plays.\nIt adds an output device named FxSound Audio Enhancer to PipeWire, applies\nthe FxSound DSP (equalizer, clarity, ambience, surround, dynamic boost,\nbass boost) and plays the result on your speakers or headphones.")
   set(CPACK_DEBIAN_PACKAGE_SECTION sound)
   set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://www.fxsound.com")
   set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+  # Debian revision: bump when the package changes but the app version does not.
+  set(CPACK_DEBIAN_PACKAGE_RELEASE 2)
   set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)          # library dependencies from the binary
   # pipewire/wireplumber: the audio server FxSound plugs into. The X11 libraries
   # are dlopen()ed by JUCE at runtime, so the automatic scan cannot see them.

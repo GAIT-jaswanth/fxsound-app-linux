@@ -47,11 +47,93 @@ FxSystemTrayView::FxSystemTrayView()
     addIcon();
 }
 #else
+namespace
+{
+// XEmbed fallback for desktops without a StatusNotifierItem host. It docks
+// only once: JUCE's setIconImage() asks the tray to dock the (already docked)
+// window again on every call, which tray hosts handle badly - on GNOME it
+// crashed the whole shell. Later image changes just repaint.
+class FxXEmbedTrayIcon : public SystemTrayIconComponent
+{
+public:
+    std::function<void(const MouseEvent&)> on_mouse_down;
+
+    void setImage(const Image& image)
+    {
+        image_ = image;
+        if (!docked_)
+        {
+            setIconImage(image, image);
+            docked_ = true;
+        }
+        repaint();
+    }
+
+    void paint(Graphics& g) override
+    {
+        g.drawImage(image_, getLocalBounds().toFloat(), RectanglePlacement::centred | RectanglePlacement::onlyReduceInSize);
+    }
+
+    void mouseDown(const MouseEvent& e) override
+    {
+        if (on_mouse_down)
+            on_mouse_down(e);
+    }
+
+private:
+    Image image_;
+    bool docked_ = false;
+};
+
+bool isGnomeDesktop()
+{
+    auto desktops = StringArray::fromTokens(SystemStats::getEnvironmentVariable("XDG_CURRENT_DESKTOP", {}), ":", {});
+    for (auto& d : desktops)
+        if (d.equalsIgnoreCase("GNOME"))
+            return true;
+    return false;
+}
+}
+
 FxSystemTrayView::FxSystemTrayView()
 {
     FxModel::getModel().addListener(this);
     custom_notification_ = true;
-    addIcon();
+
+    // FXSOUND_TRAY=auto (default) | sni | xembed | none
+    auto mode = SystemStats::getEnvironmentVariable("FXSOUND_TRAY", "auto").trim().toLowerCase();
+    bool gnome = isGnomeDesktop();
+
+    if (mode != "none" && mode != "xembed")
+    {
+        SafePointer<FxSystemTrayView> safe(this);
+        FxStatusNotifierItem::Callbacks callbacks;
+        callbacks.activate = [safe](int x, int y) {
+            MessageManager::callAsync([safe, x, y] { if (safe != nullptr) safe->onTrayClick({ x, y }, false); });
+        };
+        callbacks.menuAction = [safe](int action) {
+            MessageManager::callAsync([safe, action] { if (safe != nullptr) safe->runTrayMenuAction(action); });
+        };
+        callbacks.menuAboutToShow = [safe] {
+            MessageManager::callAsync([safe] { if (safe != nullptr) safe->refreshTrayMenu(true); });
+        };
+        status_notifier_item_ = std::make_unique<FxStatusNotifierItem>("fxsound", "FxSound", callbacks);
+
+        // On GNOME, keep waiting for a host even if there is none yet: the icon
+        // appears as soon as the AppIndicator extension is enabled.
+        if (!status_notifier_item_->waitForHost(1000) && mode == "auto" && !gnome)
+            status_notifier_item_.reset();
+    }
+
+    // XEmbed only where it is safe: never on GNOME unless explicitly requested.
+    if (status_notifier_item_ == nullptr && (mode == "xembed" || (mode == "auto" && !gnome)))
+    {
+        auto icon = std::make_unique<FxXEmbedTrayIcon>();
+        icon->on_mouse_down = [this](const MouseEvent& e) { onTrayClick(e.getScreenPosition(), e.mods.isPopupMenu()); };
+        xembed_icon_ = std::move(icon);
+    }
+
+    addIcon();   // also schedules the first tray menu, built once FxController is initialised
 }
 #endif
 
@@ -75,6 +157,8 @@ FxSystemTrayView::~FxSystemTrayView()
 #else
 FxSystemTrayView::~FxSystemTrayView()
 {
+    status_notifier_item_.reset();   // stops its D-Bus thread
+    xembed_icon_.reset();
     FxModel::getModel().removeListener(this);
 }
 #endif
@@ -85,6 +169,9 @@ void FxSystemTrayView::modelChanged(FxModel::Event model_event)
     {
         showNotification();
     }
+#if ! JUCE_WINDOWS
+    scheduleTrayMenuRefresh();   // presets, outputs and power appear in the tray menu
+#endif
 }
 
 #if JUCE_WINDOWS
@@ -141,7 +228,7 @@ void FxSystemTrayView::setStatus(bool power, bool processing)
 #else
 // Renders the tray icon from the app's logo SVGs (Windows uses .ico resources:
 // red/blue when processing, white when on but idle, gray when off).
-Image FxSystemTrayView::makeIcon(bool power, bool processing)
+Image FxSystemTrayView::makeIcon(bool power, bool processing, int icon_size)
 {
     const char* svg = BinaryData::logowhite_svg;
     int size = BinaryData::logowhite_svgSize;
@@ -151,25 +238,48 @@ Image FxSystemTrayView::makeIcon(bool power, bool processing)
         svg = dark ? BinaryData::logored_svg : BinaryData::logoblue_svg;
         size = dark ? BinaryData::logored_svgSize : BinaryData::logoblue_svgSize;
     }
-    Image image(Image::ARGB, 64, 64, true);
+    Image image(Image::ARGB, icon_size, icon_size, true);
     if (auto drawable = Drawable::createFromImageData(svg, (size_t)size))
     {
         Graphics g(image);
-        drawable->drawWithin(g, Rectangle<float>(0, 0, 64, 64), RectanglePlacement::centred, power ? 1.0f : 0.45f);
+        drawable->drawWithin(g, Rectangle<float>(0, 0, (float)icon_size, (float)icon_size), RectanglePlacement::centred, power ? 1.0f : 0.45f);
     }
     return image;
 }
 
 void FxSystemTrayView::setStatus(bool power, bool processing)
 {
-    auto image = makeIcon(power, processing);
-    setIconImage(image, image);
-
     String param = power ? TRANS(L"on") : TRANS(L"off");
     auto& model = FxModel::getModel();
-    String tool_tip = String(TRANS("FxSound is %s.")).replace("%s", param)
-                    + "\n\n" + TRANS("Output: ") + String(model.getSelectedOutput().deviceFriendlyName.c_str());
-    setIconTooltip(tool_tip);
+    String status = String(TRANS("FxSound is %s.")).replace("%s", param);
+    String output = TRANS("Output: ") + String(model.getSelectedOutput().deviceFriendlyName.c_str());
+
+    if (status_notifier_item_ != nullptr)
+    {
+        // Several sizes so the panel can pick a sharp one; ARGB32, big-endian.
+        std::vector<FxStatusNotifierItem::Pixmap> pixmaps;
+        for (int size : { 16, 22, 24, 32, 48, 64 })
+        {
+            auto image = makeIcon(power, processing, size);
+            FxStatusNotifierItem::Pixmap pixmap;
+            pixmap.width = pixmap.height = size;
+            pixmap.argb.reserve((size_t)size * size * 4);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    auto c = image.getPixelAt(x, y);
+                    pixmap.argb.insert(pixmap.argb.end(), { c.getAlpha(), c.getRed(), c.getGreen(), c.getBlue() });
+                }
+            pixmaps.push_back(std::move(pixmap));
+        }
+        status_notifier_item_->setIcon(std::move(pixmaps));
+        status_notifier_item_->setToolTip("FxSound", (status + "\n" + output).toStdString());
+    }
+    if (auto* icon = dynamic_cast<FxXEmbedTrayIcon*>(xembed_icon_.get()))
+    {
+        icon->setImage(makeIcon(power, processing));
+    }
+    scheduleTrayMenuRefresh();
 }
 #endif
 
@@ -292,13 +402,26 @@ void FxSystemTrayView::addIcon()
 #endif
 
 void FxSystemTrayView::showContextMenu()
-{    
+{
+    FxController::getInstance().checkDeviceChanges();
+    auto context_menu = createContextMenu();
+
+#if JUCE_WINDOWS
+    HWND hWnd = (HWND)getWindowHandle();
+
+    SetFocus(hWnd);
+    SetForegroundWindow(hWnd);
+
+#endif
+    context_menu.show();
+}
+
+PopupMenu FxSystemTrayView::createContextMenu()
+{
     PopupMenu context_menu;
 
     PopupMenu preset_menu;
     PopupMenu theme_menu;
-
-    FxController::getInstance().checkDeviceChanges();
 
     auto id = PRESET_MENU_ID_START;
     auto count = FxModel::getModel().getPresetCount();
@@ -399,14 +522,7 @@ void FxSystemTrayView::showContextMenu()
     context_menu.addItem(donate);
     context_menu.addItem(exit);
 
-#if JUCE_WINDOWS
-    HWND hWnd = (HWND)getWindowHandle();
-
-    SetFocus(hWnd);
-    SetForegroundWindow(hWnd);
-
-#endif
-    context_menu.show();
+    return context_menu;
 }
 
 void FxSystemTrayView::addOutputDeviceMenu(PopupMenu* context_menu)
@@ -566,11 +682,15 @@ LRESULT CALLBACK FxSystemTrayView::wndProc(HWND hwnd, UINT message, WPARAM wPara
     return 0;
 }
 #else
-void FxSystemTrayView::mouseDown(const MouseEvent& e)
+void FxSystemTrayView::onTrayClick(Point<int> screen_position, bool popup_menu)
 {
-    // Same actions as Windows: left click toggles the window, right click opens the menu.
-    last_click_position_ = e.getScreenPosition();
-    if (e.mods.isPopupMenu())
+    // Same actions as Windows: left click toggles the window, right click opens
+    // the menu (a StatusNotifierItem host shows the D-Bus menu itself).
+    if (!screen_position.isOrigin())
+    {
+        last_click_position_ = screen_position;
+    }
+    if (popup_menu)
     {
         showContextMenu();
     }
@@ -582,5 +702,77 @@ void FxSystemTrayView::mouseDown(const MouseEvent& e)
     {
         FxController::getInstance().showMainWindow();
     }
+}
+
+void FxSystemTrayView::scheduleTrayMenuRefresh()
+{
+    if (status_notifier_item_ == nullptr || tray_menu_refresh_pending_)
+        return;
+    tray_menu_refresh_pending_ = true;
+    SafePointer<FxSystemTrayView> safe(this);
+    MessageManager::callAsync([safe] { if (safe != nullptr) safe->refreshTrayMenu(false); });
+}
+
+void FxSystemTrayView::refreshTrayMenu(bool check_devices)
+{
+    tray_menu_refresh_pending_ = false;
+    if (status_notifier_item_ == nullptr)
+        return;
+    if (check_devices)
+    {
+        FxController::getInstance().checkDeviceChanges();   // as when the Windows menu opens
+    }
+    auto menu = createContextMenu();
+    tray_menu_generation_ = (tray_menu_generation_ + 1) % 100000;
+    tray_menu_actions_.clear();
+    status_notifier_item_->setMenu(toTrayMenuItems(menu));
+}
+
+std::vector<FxStatusNotifierItem::MenuItem> FxSystemTrayView::toTrayMenuItems(const PopupMenu& menu)
+{
+    std::vector<FxStatusNotifierItem::MenuItem> items;
+    for (PopupMenu::MenuItemIterator it(menu); it.next();)
+    {
+        auto& item = it.getItem();
+        FxStatusNotifierItem::MenuItem out;
+        if (item.isSeparator)
+        {
+            // No separators at the start or end, or two in a row.
+            if (items.empty() || items.back().separator)
+                continue;
+            out.separator = true;
+        }
+        else
+        {
+            out.label = item.text.toStdString();
+            out.enabled = item.isEnabled && !item.isSectionHeader;
+            out.checked = item.isTicked;
+            if (item.subMenu != nullptr)
+            {
+                out.children = toTrayMenuItems(*item.subMenu);
+            }
+            else if (out.enabled && item.action != nullptr)
+            {
+                out.action = tray_menu_generation_ * TRAY_ACTIONS_PER_MENU + (int)tray_menu_actions_.size();
+                tray_menu_actions_.push_back(item.action);
+            }
+        }
+        items.push_back(std::move(out));
+    }
+    while (!items.empty() && items.back().separator)
+        items.pop_back();
+    return items;
+}
+
+void FxSystemTrayView::runTrayMenuAction(int action)
+{
+    // Ignore clicks on a menu that has been rebuilt since it was shown.
+    if (action / TRAY_ACTIONS_PER_MENU != tray_menu_generation_)
+        return;
+    auto index = (size_t)(action % TRAY_ACTIONS_PER_MENU);
+    if (index >= tray_menu_actions_.size())
+        return;
+    auto handler = tray_menu_actions_[index];   // copy: the action may rebuild the menu (e.g. Settings runs a modal loop)
+    handler();
 }
 #endif

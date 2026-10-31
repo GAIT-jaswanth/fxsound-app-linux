@@ -29,12 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*
 */
 
-#if JUCE_WINDOWS
-class FxSystemTrayView : public Component, public FxModel::Listener
-#else
-// Linux: JUCE's cross-platform tray icon (XEmbed system tray).
-class FxSystemTrayView : public SystemTrayIconComponent, public FxModel::Listener
+#if ! JUCE_WINDOWS
+#include "FxStatusNotifierItem.h"
 #endif
+
+class FxSystemTrayView : public Component, public FxModel::Listener
 {
 public:
 	FxSystemTrayView();
@@ -44,7 +43,7 @@ public:
 	void setStatus(bool power, bool processing);
 	Point<int> getSystemTrayWindowPosition(int width, int height);
 #if ! JUCE_WINDOWS
-	static Image makeIcon(bool power, bool processing);  // logo for the tray and the window icon
+	static Image makeIcon(bool power, bool processing, int size = 64);  // logo for the tray and the window icon
 #endif
 
 private:
@@ -61,11 +60,25 @@ private:
 
 	static LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 #else
-	void mouseDown(const MouseEvent& e) override;
+	// Linux tray: a StatusNotifierItem (D-Bus) when the desktop has a host for
+	// it, else an XEmbed icon, except on GNOME (see FxStatusNotifierItem.h).
+	static constexpr int TRAY_ACTIONS_PER_MENU = 10000;
+	void onTrayClick(Point<int> screen_position, bool popup_menu);
+	void scheduleTrayMenuRefresh();
+	void refreshTrayMenu(bool check_devices);
+	void runTrayMenuAction(int action);
+	std::vector<FxStatusNotifierItem::MenuItem> toTrayMenuItems(const PopupMenu& menu);
+
+	std::unique_ptr<FxStatusNotifierItem> status_notifier_item_;
+	std::unique_ptr<Component> xembed_icon_;
+	std::vector<std::function<void()>> tray_menu_actions_;
+	int tray_menu_generation_ = 0;
+	bool tray_menu_refresh_pending_ = false;
 	Point<int> last_click_position_;
 #endif
 
 	void addIcon();
+	PopupMenu createContextMenu();
 	void showContextMenu();
 	void addOutputDeviceMenu(PopupMenu* context_menu);
 	void showNotification();
