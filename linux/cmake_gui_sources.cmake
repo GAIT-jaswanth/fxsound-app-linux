@@ -1,0 +1,33 @@
+# FxSound GUI sources (from fxsound/Project/FxSound_App.vcxproj)
+set(FXSOUND_GUI_SOURCES
+    ${FX_ROOT}/fxsound/Source/GUI/FxAudioControls.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxAudioSlider.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxBalanceSlider.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxComboBox.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxController.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxEqualizer.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxHotkeyLabel.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxHyperlink.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxLanguage.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxLiteView.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxMainWindow.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxMessage.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxModel.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxNotification.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxOutputPreference.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxPowerButton.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxPresetExportDialog.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxPresetImportDialog.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxPresetNameEditor.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxProView.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxSettingsDialog.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxSystemTrayView.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxTheme.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxView.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxVisualizer.cpp
+    ${FX_ROOT}/fxsound/Source/GUI/FxWindow.cpp
+    ${FX_ROOT}/fxsound/Source/Main.cpp
+    ${FX_ROOT}/fxsound/Source/Utils/Settings/DeviceConfig.cpp
+    ${FX_ROOT}/fxsound/Source/Utils/Settings/Settings.cpp
+    ${FX_ROOT}/fxsound/Source/Utils/SysInfo/SysInfo.cpp
+)

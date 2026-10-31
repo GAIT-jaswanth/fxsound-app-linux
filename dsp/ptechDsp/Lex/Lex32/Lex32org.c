@@ -32,7 +32,7 @@
 
 #include "dsp_mem1.h" /* For DSP memory configuration (typical delay version) */
 #include "c_dsps.h"
-#include "c_Lex.h"   /* For specific parameter mappings */
+#include "c_lex.h"   /* For specific parameter mappings */
 #include "dutio.h"	  /* A/D I/O macros */
 #include "dutcom.h"	  /* PC to DSP and DSP to PC com routines */
 #include "dutinit.h"  /* DSP and AD initialization */

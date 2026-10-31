@@ -29,7 +29,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*
 */
 
+#if JUCE_WINDOWS
 class FxSystemTrayView : public Component, public FxModel::Listener
+#else
+// Linux: JUCE's cross-platform tray icon (XEmbed system tray).
+class FxSystemTrayView : public SystemTrayIconComponent, public FxModel::Listener
+#endif
 {
 public:
 	FxSystemTrayView();
@@ -38,6 +43,9 @@ public:
 	void modelChanged(FxModel::Event model_event) override;
 	void setStatus(bool power, bool processing);
 	Point<int> getSystemTrayWindowPosition(int width, int height);
+#if ! JUCE_WINDOWS
+	static Image makeIcon(bool power, bool processing);  // logo for the tray and the window icon
+#endif
 
 private:
 	static constexpr int MENU_ID_OPEN = 1;
@@ -47,10 +55,15 @@ private:
 	static constexpr int MENU_ID_EXIT = 5;
 	static constexpr int PRESET_MENU_ID_START = 101;
 	static constexpr int OUTPUT_MENU_ID_START = 201;
+#if JUCE_WINDOWS
 	static constexpr int WMAPP_FXTRAYICON = WM_APP + 1;
 	static const GUID trayIconGuid_;
 
 	static LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+#else
+	void mouseDown(const MouseEvent& e) override;
+	Point<int> last_click_position_;
+#endif
 
 	void addIcon();
 	void showContextMenu();
@@ -60,8 +73,10 @@ private:
 
 	bool custom_notification_;
 	FxNotification notification_;
+#if JUCE_WINDOWS
 	WNDPROC componentWndProc_;
 	UINT taskbar_created_message_;
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FxSystemTrayView)
 };

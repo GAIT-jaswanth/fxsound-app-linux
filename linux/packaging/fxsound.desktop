@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=FxSound
+GenericName=Audio Enhancer
+Comment=Improve the sound of everything you play
+Exec=fxsound
+Icon=fxsound
+Terminal=false
+Categories=AudioVideo;Audio;Mixer;
+Keywords=equalizer;eq;bass;audio;sound;enhancer;
+StartupWMClass=FxSound

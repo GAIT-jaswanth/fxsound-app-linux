@@ -21,10 +21,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../Utils/SysInfo/SysInfo.h"
 
 // {A8E96325-5269-443C-A0D8-0D02562FE553}
+#if JUCE_WINDOWS
 const GUID FxSystemTrayView::trayIconGuid_ =
 { 0xa8e96325, 0x5269, 0x443c, { 0xa0, 0xd8, 0xd, 0x2, 0x56, 0x2f, 0xe5, 0x53 } };
+#endif
 
 
+#if JUCE_WINDOWS
 FxSystemTrayView::FxSystemTrayView()
 {
     FxModel::getModel().addListener(this);
@@ -43,7 +46,16 @@ FxSystemTrayView::FxSystemTrayView()
 
     addIcon();
 }
+#else
+FxSystemTrayView::FxSystemTrayView()
+{
+    FxModel::getModel().addListener(this);
+    custom_notification_ = true;
+    addIcon();
+}
+#endif
 
+#if JUCE_WINDOWS
 FxSystemTrayView::~FxSystemTrayView()
 {
     FxModel::getModel().removeListener(this);
@@ -60,6 +72,12 @@ FxSystemTrayView::~FxSystemTrayView()
 
     removeFromDesktop();
 }
+#else
+FxSystemTrayView::~FxSystemTrayView()
+{
+    FxModel::getModel().removeListener(this);
+}
+#endif
 
 void FxSystemTrayView::modelChanged(FxModel::Event model_event)
 {
@@ -69,6 +87,7 @@ void FxSystemTrayView::modelChanged(FxModel::Event model_event)
     }
 }
 
+#if JUCE_WINDOWS
 void FxSystemTrayView::setStatus(bool power, bool processing)
 {
     HINSTANCE hInst = GetModuleHandle(NULL);
@@ -119,7 +138,42 @@ void FxSystemTrayView::setStatus(bool power, bool processing)
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
+#else
+// Renders the tray icon from the app's logo SVGs (Windows uses .ico resources:
+// red/blue when processing, white when on but idle, gray when off).
+Image FxSystemTrayView::makeIcon(bool power, bool processing)
+{
+    const char* svg = BinaryData::logowhite_svg;
+    int size = BinaryData::logowhite_svgSize;
+    if (power && processing)
+    {
+        bool dark = FxTheme::getThemeMode() == FxThemeMode::Dark;
+        svg = dark ? BinaryData::logored_svg : BinaryData::logoblue_svg;
+        size = dark ? BinaryData::logored_svgSize : BinaryData::logoblue_svgSize;
+    }
+    Image image(Image::ARGB, 64, 64, true);
+    if (auto drawable = Drawable::createFromImageData(svg, (size_t)size))
+    {
+        Graphics g(image);
+        drawable->drawWithin(g, Rectangle<float>(0, 0, 64, 64), RectanglePlacement::centred, power ? 1.0f : 0.45f);
+    }
+    return image;
+}
 
+void FxSystemTrayView::setStatus(bool power, bool processing)
+{
+    auto image = makeIcon(power, processing);
+    setIconImage(image, image);
+
+    String param = power ? TRANS(L"on") : TRANS(L"off");
+    auto& model = FxModel::getModel();
+    String tool_tip = String(TRANS("FxSound is %s.")).replace("%s", param)
+                    + "\n\n" + TRANS("Output: ") + String(model.getSelectedOutput().deviceFriendlyName.c_str());
+    setIconTooltip(tool_tip);
+}
+#endif
+
+#if JUCE_WINDOWS
 Point<int> FxSystemTrayView::getSystemTrayWindowPosition(int width, int height)
 {
     Point<int> pos = { 0, 0 };
@@ -168,7 +222,25 @@ Point<int> FxSystemTrayView::getSystemTrayWindowPosition(int width, int height)
 
     return pos;
 }
+#else
+Point<int> FxSystemTrayView::getSystemTrayWindowPosition(int width, int height)
+{
+    // There is no API for the tray icon's position on Linux. Use the corner
+    // nearest to where the icon was last clicked (as Windows uses the icon
+    // rectangle); before any click, the top-right corner (GNOME/KDE panels).
+    Point<int> pos = { 0, 0 };
+    auto display = Desktop::getInstance().getDisplays().getPrimaryDisplay();
+    if (display == nullptr)
+        return pos;
+    auto area = display->userArea;
+    auto click = last_click_position_.isOrigin() ? Point<int>(area.getRight(), area.getY()) : last_click_position_;
+    pos.x = click.x < area.getCentreX() ? area.getX() + 10 : area.getRight() - width - 10;
+    pos.y = click.y < area.getCentreY() ? area.getY() + 10 : area.getBottom() - height - 10;
+    return pos;
+}
+#endif
 
+#if JUCE_WINDOWS
 void FxSystemTrayView::addIcon()
 {
     NOTIFYICONDATA nid = { sizeof(nid) };
@@ -212,6 +284,12 @@ void FxSystemTrayView::addIcon()
 
     setVisible(true);
 }
+#else
+void FxSystemTrayView::addIcon()
+{
+    setStatus(FxModel::getModel().getPowerState(), FxController::getInstance().isAudioProcessing());
+}
+#endif
 
 void FxSystemTrayView::showContextMenu()
 {    
@@ -321,11 +399,13 @@ void FxSystemTrayView::showContextMenu()
     context_menu.addItem(donate);
     context_menu.addItem(exit);
 
+#if JUCE_WINDOWS
     HWND hWnd = (HWND)getWindowHandle();
 
     SetFocus(hWnd);
     SetForegroundWindow(hWnd);
 
+#endif
     context_menu.show();
 }
 
@@ -389,19 +469,26 @@ void FxSystemTrayView::showNotification()
 
     if (message.isNotEmpty())
     {
+#if JUCE_WINDOWS
         if (custom_notification_ || link.first.isNotEmpty())
+#else
+        if (true)
+#endif
         {
+#if JUCE_WINDOWS
             QUERY_USER_NOTIFICATION_STATE quns;
             if (FAILED(SHQueryUserNotificationState(&quns)) || quns != QUNS_ACCEPTS_NOTIFICATIONS)
             {
                 return;
             }
 
+#endif
             notification_.setMessage(message, link);
             Point<int> pos = getSystemTrayWindowPosition(notification_.getWidth(), notification_.getHeight());
             notification_.setBounds(pos.x, pos.y, notification_.getWidth(), notification_.getHeight());
             notification_.showMessage();
         }
+#if JUCE_WINDOWS
         else
         {
             NOTIFYICONDATA nid = { sizeof(nid) };
@@ -416,6 +503,7 @@ void FxSystemTrayView::showNotification()
 
             Shell_NotifyIcon(NIM_MODIFY, &nid);
         }
+#endif
     }
 }
 
@@ -431,6 +519,7 @@ String FxSystemTrayView::getTruncatedText(const String& text, int max_length)
     }
 }
 
+#if JUCE_WINDOWS
 LRESULT CALLBACK FxSystemTrayView::wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     auto tray_view = reinterpret_cast<FxSystemTrayView*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
@@ -476,3 +565,22 @@ LRESULT CALLBACK FxSystemTrayView::wndProc(HWND hwnd, UINT message, WPARAM wPara
 
     return 0;
 }
+#else
+void FxSystemTrayView::mouseDown(const MouseEvent& e)
+{
+    // Same actions as Windows: left click toggles the window, right click opens the menu.
+    last_click_position_ = e.getScreenPosition();
+    if (e.mods.isPopupMenu())
+    {
+        showContextMenu();
+    }
+    else if (FxController::getInstance().isMainWindowVisible())
+    {
+        FxController::getInstance().hideMainWindow();
+    }
+    else
+    {
+        FxController::getInstance().showMainWindow();
+    }
+}
+#endif

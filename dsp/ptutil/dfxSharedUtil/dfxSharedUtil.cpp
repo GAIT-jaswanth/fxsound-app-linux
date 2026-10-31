@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "slout.h"
 #include "mry.h"
-#include "file.h"
+#include "File.h"
 #include "reg.h"
 
 #include "u_dfxSharedUtil.h"

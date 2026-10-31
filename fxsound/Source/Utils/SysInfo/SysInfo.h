@@ -16,8 +16,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifdef _WIN32
 #include <mmdeviceapi.h>
 #include <Functiondiscoverykeys_devpkey.h>
+#endif
 
 #include "../JuceLibraryCode/JuceHeader.h"
 
@@ -28,11 +30,13 @@ public:
 	~SysInfo() = default;
 
 	static void enumAudioOutputs(StringArray& audioOutputNames);
-    static bool isServiceRunning(LPCWSTR service_name);
+    static bool isServiceRunning(const wchar_t* service_name); // == LPCWSTR
     static bool canSupportHotkeys();
 	static bool isRemoteSession();
 
 private:
+#ifdef _WIN32
 	static String getAudioOutputName(IMMDevice *pDevice);
+#endif
 };
 

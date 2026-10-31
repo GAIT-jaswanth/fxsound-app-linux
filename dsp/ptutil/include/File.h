@@ -34,7 +34,11 @@ int PT_DECLSPEC fileDoesPathExist_Wide(wchar_t *wcp_file_path, int *ip_exist);
 int PT_DECLSPEC fileRemove(char *, CSlout *);
 int PT_DECLSPEC fileRemove_Wide(wchar_t *, CSlout *);
 int PT_DECLSPEC fileRemoveWithStatus_Wide(wchar_t *, int *, CSlout *);
+#ifdef _WIN32
 int PT_DECLSPEC fileSize_Wide(wchar_t *, unsigned __int64 *, CSlout *);
+#else
+int PT_DECLSPEC fileSize_Wide(wchar_t *, uint64_t *, CSlout *);
+#endif
 int PT_DECLSPEC fileToString(char *, char *, int, CSlout *); 
 int PT_DECLSPEC fileToString_Wide(wchar_t *, char *, int , CSlout *);
 int PT_DECLSPEC fileToString_WithAllocation_Wide(wchar_t *, wchar_t **, int *, CSlout *);

@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "Shlwapi.h"
 #include "errno.h"
 #include "slout.h"
-#include "file.h"
+#include "File.h"
 #include "string.h"
 #include "pstr.h"
 #include "mry.h"
@@ -37,7 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "operatingSystem.h"
 
 #define DEF_GLOBAL
-#include "u_file.h"
+#include "U_FILE.H"
 
 /*
  * FUNCTION: fileOpen()

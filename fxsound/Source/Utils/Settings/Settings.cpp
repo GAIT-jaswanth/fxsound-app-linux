@@ -20,8 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "Settings.h"
+#if JUCE_WINDOWS
 #include <Windows.h>
 #include <wincrypt.h>
+#endif
 
 FxSound::Settings::Settings()
 {
@@ -40,7 +42,12 @@ FxSound::Settings::Settings()
     )";
 
 	options.applicationName = FxSound::APPLICATION_NAME;
+#if JUCE_LINUX
+	// JUCE puts folderName directly under $HOME on Linux; follow the XDG convention instead.
+	options.folderName = ".config/" + String(FxSound::SETTINGS_FOLDER);
+#else
 	options.folderName = FxSound::SETTINGS_FOLDER;
+#endif
 	options.filenameSuffix = FxSound::SECURE_EXTN;
 	options.doNotSave = false;
 	app_secure_properties_.setStorageParameters(options);
@@ -99,9 +106,9 @@ juce::var FxSound::Settings::getJson(juce::StringRef key) noexcept
 	return json.isNotEmpty() ? juce::JSON::parse(json) : juce::var{};
 }
 
-void FxSound::Settings::setString(StringRef key, String value, bool default) noexcept
+void FxSound::Settings::setString(StringRef key, String value, bool is_default) noexcept
 {
-    if (default)
+    if (is_default)
     {
         default_settings_.setValue(key, value);
     }
@@ -111,9 +118,9 @@ void FxSound::Settings::setString(StringRef key, String value, bool default) noe
     }	
 }
 
-void FxSound::Settings::setInt(StringRef key, int value, bool default) noexcept
+void FxSound::Settings::setInt(StringRef key, int value, bool is_default) noexcept
 {
-    if (default)
+    if (is_default)
     {
         default_settings_.setValue(key, value);
     }
@@ -123,9 +130,9 @@ void FxSound::Settings::setInt(StringRef key, int value, bool default) noexcept
     }
 }
 
-void FxSound::Settings::setDouble(StringRef key, double value, bool default) noexcept
+void FxSound::Settings::setDouble(StringRef key, double value, bool is_default) noexcept
 {
-    if (default)
+    if (is_default)
     {
         default_settings_.setValue(key, value);
     }
@@ -135,9 +142,9 @@ void FxSound::Settings::setDouble(StringRef key, double value, bool default) noe
     }
 }
 
-void FxSound::Settings::setBool(StringRef key, bool value, bool default) noexcept
+void FxSound::Settings::setBool(StringRef key, bool value, bool is_default) noexcept
 {
-    if (default)
+    if (is_default)
     {
         default_settings_.setValue(key, value);
     }

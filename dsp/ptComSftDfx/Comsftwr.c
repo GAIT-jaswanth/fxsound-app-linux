@@ -309,7 +309,7 @@ int COMSFTWR_DECL comSftwrInitDspAlgorithm(PT_HANDLE *hp_comSftwr, realtype r_sa
 #ifdef WIN32
 	__int64 perf_count;
 #else
-	long long perf_count;
+	int64_t perf_count; // not "long long": Linux builds remap "long" (see linux/compat/dsp_prelude.h)
 #endif
 	long sample_count_init;
 	struct comSftwrHdlType *cast_handle;
@@ -332,7 +332,7 @@ int COMSFTWR_DECL comSftwrInitDspAlgorithm(PT_HANDLE *hp_comSftwr, realtype r_sa
 #ifdef WIN32
 	sample_count_init = (long)(perf_count % (__int64)COMSFTWR_DEMO_SAMPLES_ALLOWED);
 #else
-	sample_count_init = (long)(perf_count % (long long)COMSFTWR_DEMO_SAMPLES_ALLOWED);
+	sample_count_init = (long)(perf_count % (int64_t)COMSFTWR_DEMO_SAMPLES_ALLOWED);
 #endif
 	cast_handle->sample_count = sample_count_init;
 

@@ -47,7 +47,7 @@ extern "C"
 #include "comSftwr.h"
 }
 
-#include "pwav.h"
+#include "Pwav.h"
 #include "com.h"
 #include "u_com.h"
 

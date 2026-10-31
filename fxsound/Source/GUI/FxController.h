@@ -29,7 +29,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../Source/Utils/Settings/DeviceConfig.h"
 #include "AudioPassthru.h"
 #include "DfxDsp.h"
+#if JUCE_WINDOWS
 #include <wtsapi32.h>
+#endif
+
+#if ! JUCE_WINDOWS
+// Win32 hotkey modifier flags, same values so saved hotkey settings stay compatible.
+enum { MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004 };
+#endif
 
 using namespace FxSound;
 
@@ -72,6 +79,11 @@ public:
 	void init(FxMainWindow* main_window, FxSystemTrayView* system_tray_view, AudioPassthru* audio_passthru);
 	void initPresets();
 	void printStatus();
+#if ! JUCE_WINDOWS
+	// When set, printStatus() sends its JSON here instead of stdout, so a
+	// forwarded `FxSound --status` can print in the caller's terminal (see Main.cpp).
+	std::function<void(const String&)> status_output_;
+#endif
 	static File getStatusFile();
 
 	void showView();
@@ -177,6 +189,7 @@ public:
 	FxSound::Settings& getSettings() { return settings_; }
 
 private:
+#if JUCE_WINDOWS
 	class MessageWindow
 	{
 	public:
@@ -215,16 +228,19 @@ private:
 
 		LPCWSTR getClassNameFromAtom() noexcept { return (LPCWSTR)(pointer_sized_uint)atom_; }
 	};
+#endif
 
-	static constexpr UINT CMD_ON_OFF = 1001;
-	static constexpr UINT CMD_OPEN_CLOSE = 1002;
-	static constexpr UINT CMD_NEXT_PRESET = 1003;
-	static constexpr UINT CMD_PREVIOUS_PRESET = 1004;
-	static constexpr UINT CMD_NEXT_OUTPUT = 1005;
+	static constexpr unsigned int CMD_ON_OFF = 1001;
+	static constexpr unsigned int CMD_OPEN_CLOSE = 1002;
+	static constexpr unsigned int CMD_NEXT_PRESET = 1003;
+	static constexpr unsigned int CMD_PREVIOUS_PRESET = 1004;
+	static constexpr unsigned int CMD_NEXT_OUTPUT = 1005;
 
 	FxController();
 
+#if JUCE_WINDOWS
 	static LRESULT CALLBACK eventCallback(HWND hwnd, const UINT message, const WPARAM w_param, const LPARAM l_param);
+#endif
 	void timerCallback() override;
 	void onSoundDeviceChange(bool processing) override;
 	void onSystemSuspend();
@@ -249,13 +265,17 @@ private:
 
     String FormatString(const String& format, const String& arg);
 
+#if JUCE_WINDOWS
 	typedef HPOWERNOTIFY(WINAPI* RegisterSuspendResumeNotificationFunc)(HANDLE, DWORD);
 	typedef BOOL(WINAPI* UnregisterSuspendResumeNotificationFunc)(HPOWERNOTIFY);
 
 	MessageWindow message_window_;
+#endif
 	bool hotkeys_registered_;
+#if JUCE_WINDOWS
 	HPOWERNOTIFY powerNotify_;
 	UnregisterSuspendResumeNotificationFunc unregister_suspend_resume_notification_;
+#endif
 
 	FxMainWindow* main_window_;
 	FxSystemTrayView* system_tray_view_;
@@ -291,7 +311,9 @@ private:
 	bool survey_tip_;
 	int max_user_presets_;
 
+#if JUCE_WINDOWS
 	DWORD session_id_;
+#endif
 
 	CriticalSection lock_;
 	CriticalSection save_lock_;

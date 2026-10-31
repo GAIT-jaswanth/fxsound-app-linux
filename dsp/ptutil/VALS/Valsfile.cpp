@@ -27,12 +27,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <time.h>
 
 #include "slout.h"
-#include "file.h"
+#include "File.h"
 #include "mry.h"
 #include "vals.h"
 #include "pstr.h"
 #include "pt_defs.h"
-#include "u_vals.h"
+#include "U_vals.h"
 #include "GraphicEq.h"
 
 #define LINE_LENGTH 128

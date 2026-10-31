@@ -29,11 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "slout.h"
 #include "vals.h"
 #include "mry.h"
-#include "file.h"
-#include "prelst.h"
+#include "File.h"
+#include "Prelst.h"
 #include "pstr.h"
 #include "pt_defs.h"
-#include "u_prelst.h"
+#include "U_prelst.h"
 
 /*
  * FUNCTION: prelstCreate()

@@ -23,6 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "FxPresetExportDialog.h"
 #include "FxPresetImportDialog.h"
 #include "FxPresetNameEditor.h"
+#if ! JUCE_WINDOWS
+#include "FxSystemTrayView.h"  // FxSystemTrayView::makeIcon
+#endif
 
 class FxPresetMenuItem : public PopupMenu::CustomComponent, private TextEditor::Listener
 {
@@ -254,12 +257,18 @@ void FxMainWindow::show()
 	auto* peer = getPeer();
 	if (peer)
 	{
+#if JUCE_WINDOWS
 		HWND hwnd = (HWND)peer->getNativeHandle();
 		if (IsIconic(hwnd)) // If minimized, restore first
 			ShowWindow(hwnd, SW_RESTORE);
 
 		SetForegroundWindow(hwnd); // Bring to front
 		SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+#else
+		if (peer->isMinimised()) // If minimized, restore first
+			peer->setMinimised(false);
+		peer->toFront(true);
+#endif
 	}
 }
 
@@ -364,6 +373,7 @@ void FxMainWindow::setResizeImage()
 	resize_button_.setImages(resize_image_.get(), resize_hover_image_.get());
 }
 
+#if JUCE_WINDOWS
 void FxMainWindow::setIcon(bool power, bool processing)
 {
 	HINSTANCE hInst = GetModuleHandle(NULL);
@@ -401,6 +411,13 @@ void FxMainWindow::setIcon(bool power, bool processing)
 		DestroyIcon(curr_icon);
 	}
 }
+#else
+void FxMainWindow::setIcon(bool power, bool processing)
+{
+	if (auto* peer = getPeer())
+		peer->setIcon(FxSystemTrayView::makeIcon(power, processing));
+}
+#endif
 
 void FxMainWindow::enablePowerButton(bool enable)
 {
@@ -431,6 +448,7 @@ bool FxMainWindow::keyPressed(const KeyPress& key)
 	return Component::keyPressed(key);
 }
 
+#if JUCE_WINDOWS
 void FxMainWindow::visibilityChanged()
 {
 	auto* peer = getPeer();
@@ -444,6 +462,12 @@ void FxMainWindow::visibilityChanged()
 		}
 	}
 }
+#else
+void FxMainWindow::visibilityChanged()
+{
+	// The Windows version restores the minimize box on the native window; not needed here.
+}
+#endif
 
 void FxMainWindow::showMenu()
 {
@@ -580,7 +604,12 @@ void FxMainWindow::buttonClicked(Button* button)
 	{
 		if (isOnDesktop())
 		{
+#if JUCE_WINDOWS
 			ShowWindow((HWND)getWindowHandle(), SW_MINIMIZE);
+#else
+			if (auto* peer = getPeer())
+				peer->setMinimised(true);
+#endif
 		}
 	}
 }

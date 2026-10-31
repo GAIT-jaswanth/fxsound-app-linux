@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <time.h>
 
 #include "slout.h"
-#include "Ptime.h"
+#include "ptime.h"
 #include "mth.h"
 #include "pt_defs.h"
 #include "pstr.h"

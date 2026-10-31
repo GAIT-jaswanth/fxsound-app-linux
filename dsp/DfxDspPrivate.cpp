@@ -22,13 +22,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "codedefs.h"
 #include "DfxSdk.h"
 #include "dfxp.h"
-#include "prelst.h"
-#include "file.h"
+#include "Prelst.h"
+#include "File.h"
 #include "qnt.h"
 #include <string>
 
 #include "BinauralSyn.h"
-#include "ptutil\dfxp\u_dfxp.h"
+#include "ptutil/dfxp/u_dfxp.h"
 #include "com.h"
 #include "dfxSharedUtil.h"
 #include "GraphicEq.h"
@@ -56,6 +56,7 @@ DfxDspPrivate::DfxDspPrivate()
 	slout1_ = NULL;
 	midi_to_rval_qnt_handle_ = NULL;
 	rval_to_midi_qnt_handle_ = NULL;
+	preset_list_handle_ = NULL; // was never initialized; the destructor frees it if non-NULL
 
 	swprintf(product_specific_.wcp_registry_product_name, PT_MAX_GENERIC_STRLEN, L"%s", DFXG_REGISTRY_DFX_PRODUCT_NAME_WIDE);
 	swprintf(product_specific_.wcp_displayed_product_name, PT_MAX_GENERIC_STRLEN, L"%s", DFXG_DISPLAYED_DFX_PRODUCT_NAME_WIDE);

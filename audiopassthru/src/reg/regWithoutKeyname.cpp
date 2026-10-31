@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "operatingSystem.h"
 
 #define DEF_GLOBAL
-#include "u_reg.h"
+#include "U_reg.h"
 
 /*
  * FUNCTION: regReadRegisteredOwner()

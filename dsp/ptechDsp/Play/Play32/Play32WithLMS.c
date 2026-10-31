@@ -15,7 +15,7 @@
 #ifndef DSPSOFT_TARGET
 #define DSP_TARGET
 #endif
-#include "Play_num.h"  /* Sets number of elements */
+#include "play_num.h"  /* Sets number of elements */
 
 /* Standard includes */
 #include <math.h>
@@ -37,11 +37,11 @@
 
 #include "dsp_mem1.h" /* For DSP memory configuration (typical delay version) */
 #include "c_dsps.h"
-#include "c_Play.h"   /* For specific parameter mappings */
+#include "c_play.h"   /* For specific parameter mappings */
 #include "c_aural.h"
 #include "c_lex.h"
 #include "c_max.h"
-#include "c_Wid.h"
+#include "c_wid.h"
 #include "c_dly1.h"
 #include "c_afilt.h"
 #include "dutio.h"	  /* A/D I/O macros */
@@ -49,7 +49,7 @@
 #include "dutinit.h"  /* DSP and AD initialization */
 #include "kerdma.h"
 #include "kerdelay.h"  /* Has wet-dry macro */
-#include "KerNoise.h"
+#include "kernoise.h"
 
 #define NZEROS 8
 #define NPOLES 8

@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mth.h"
 #include "DfxSdk.h"
 #include "mth.h"
-#include "file.h"
+#include "File.h"
 #include "pstr.h"
 
 /*

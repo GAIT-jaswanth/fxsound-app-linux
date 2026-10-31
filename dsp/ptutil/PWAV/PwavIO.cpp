@@ -28,8 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "slout.h"
 #include "mry.h"
-#include "pwav.h"
-#include "u_pwav.h"
+#include "Pwav.h"
+#include "U_pwav.h"
 #include "demodef.h"
 
 /*

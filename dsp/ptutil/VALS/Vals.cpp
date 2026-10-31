@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "slout.h"
 #include "mry.h"
 #include "vals.h"
-#include "u_vals.h"
+#include "U_vals.h"
 #include "GraphicEq.h"
 
 /*

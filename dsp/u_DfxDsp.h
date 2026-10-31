@@ -20,7 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 #include <string>
+#ifdef _WIN32
 #include "AudioPassthru.h"
+#endif
 #include "codedefs.h"
 #include "DfxDsp.h"
 #include "pt_defs.h"

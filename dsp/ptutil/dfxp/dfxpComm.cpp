@@ -34,9 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "midi.h"
 #include "filt.h"
 
-#include "C_Play.h"
-#include "C_aural.h"
-#include "C_dsps.h"
+#include "c_play.h"
+#include "c_aural.h"
+#include "c_dsps.h"
 #include "c_lex.h"
 #include "c_max.h"
 #include "c_aural.h"

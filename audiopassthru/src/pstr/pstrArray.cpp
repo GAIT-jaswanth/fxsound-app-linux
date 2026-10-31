@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "slout.h"
 #include "pstr.h"
 #include "ptime.h"
-#include "file.h"
+#include "File.h"
 #include "mry.h"
 #include "pt_defs.h"
 

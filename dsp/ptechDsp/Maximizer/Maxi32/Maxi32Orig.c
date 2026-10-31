@@ -39,7 +39,7 @@
 #include "dutinit.h"  /* DSP and AD initialization */
 #include "kerdma.h"
 #include "kerdelay.h"  /* Has wet-dry macro */
-#include "KerNoise.h"
+#include "kernoise.h"
 
 static void DSPS_MAXI_RUN(void);
 

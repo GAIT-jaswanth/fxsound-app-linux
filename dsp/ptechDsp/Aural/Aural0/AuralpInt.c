@@ -17,7 +17,7 @@
 #ifndef DSPSOFT_TARGET
 #define DSP_TARGET
 #endif
-#include "aur_num.h"  /* Sets number of elements */
+#include "Aur_num.h"  /* Sets number of elements */
 
 /* Standard includes */
 #include <math.h>

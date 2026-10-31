@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "codedefs.h"
 #include "slout.h"
-#include "pwav.h"
-#include "u_pwav.h"
+#include "Pwav.h"
+#include "U_pwav.h"
 
 /*
  * FUNCTION: pwavCheckIfLegalSampFreq()

@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include "Win32Main.h"
 
-#include "audiopassthru.h"
+#include "AudioPassthru.h"
 #include "DfxDsp.h"
 
 #define MAX_LOADSTRING 100
